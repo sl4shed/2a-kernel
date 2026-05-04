@@ -142,6 +142,7 @@ jobs:
           echo "CONFIG_KSU=y" >> "$DEFCONFIG"
           echo "CONFIG_KPM=y" >> "$DEFCONFIG"
           echo "CONFIG_KSU_SUSFS=y" >> "$DEFCONFIG"
+          echo "CONFIG_KSU_MANUAL_HOOK=y" >> "$DEFCONFIG"
 
           # Generate initial .config from defconfig
           make $MAKE_ARGS "${{ inputs.kernel_defconfig || 'gki_defconfig' }}"
