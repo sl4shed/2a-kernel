@@ -145,7 +145,6 @@ jobs:
 
       - name: Package AnyKernel3
         run: |
-          chmod +x Scripts/package_anykernel.sh
           Scripts/package_anykernel.sh
 
       - name: Upload artifact
