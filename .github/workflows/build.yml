@@ -17,6 +17,16 @@ on:
         required: false
         type: string
         default: 'lineage-23.2'
+      kernel_defconfig:
+        description: 'Defconfig (relative to kernel root)'
+        required: false
+        type: string
+        default: 'gki_defconfig'
+      extra_configs:
+        description: 'Extra config fragments (space-separated, relative to kernel root)'
+        required: false
+        type: string
+        default: 'vendor/waipio_GKI.config vendor/nothing/waipio_GKI.config vendor/debugfs.config'
       kpm_support:
         description: 'Enable KPM support'
         required: false
@@ -58,6 +68,14 @@ on:
         required: false
         type: string
         default: 'lineage-23.2'
+      kernel_defconfig:
+        required: false
+        type: string
+        default: 'gki_defconfig'
+      extra_configs:
+        required: false
+        type: string
+        default: 'vendor/waipio_GKI.config vendor/nothing/waipio_GKI.config vendor/debugfs.config'
       kpm_support:
         required: false
         type: boolean
@@ -90,8 +108,8 @@ jobs:
     env:
       KERNEL_DIR: kernel
       ANYKERNEL_DIR: AnyKernel3
-      DEFCONFIG: gki_defconfig
-      DEFCONFIG_FRAGS: vendor/waipio_GKI.config vendor/nothing/waipio_GKI.config vendor/debugfs.config
+      DEFCONFIG: ${{ inputs.kernel_defconfig || 'gki_defconfig' }}
+      DEFCONFIG_FRAGS: ${{ inputs.extra_configs || 'vendor/waipio_GKI.config vendor/nothing/waipio_GKI.config vendor/debugfs.config' }}
       MAKE_ARGS: >-
         ARCH=arm64
         CROSS_COMPILE=aarch64-linux-gnu-

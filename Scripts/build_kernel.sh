@@ -2,8 +2,44 @@
 set -euo pipefail
 
 cd "${KERNEL_DIR}"
+defconfig_target="${DEFCONFIG}"
+defconfig_path="${DEFCONFIG}"
+if [ -n "${DEFCONFIG}" ] && echo "${DEFCONFIG}" | grep -q '^/'; then
+  defconfig_path="${DEFCONFIG#/}"
+fi
 
-make ${MAKE_ARGS} "${DEFCONFIG}" ${DEFCONFIG_FRAGS}
+if [ -n "${defconfig_path}" ] && echo "${defconfig_path}" | grep -q '/'; then
+  if [ -f "${defconfig_path}" ]; then
+    defconfig_target="$(basename "${defconfig_path}")"
+    if [ "${defconfig_path}" != "arch/arm64/configs/${defconfig_target}" ]; then
+      cp "${defconfig_path}" "arch/arm64/configs/${defconfig_target}"
+    fi
+  else
+    echo "Defconfig path not found: ${defconfig_path}" >&2
+    exit 1
+  fi
+elif [ -n "${defconfig_path}" ]; then
+  if [ -f "${defconfig_path}" ] && [ ! -f "arch/arm64/configs/${defconfig_path}" ]; then
+    cp "${defconfig_path}" "arch/arm64/configs/${defconfig_path}"
+  fi
+  if [ ! -f "arch/arm64/configs/${defconfig_path}" ]; then
+    echo "Defconfig not found in arch/arm64/configs: ${defconfig_path}" >&2
+    exit 1
+  fi
+fi
+
+frags=()
+if [ -n "${DEFCONFIG_FRAGS:-}" ]; then
+  for frag in ${DEFCONFIG_FRAGS}; do
+    if [ -f "${frag}" ]; then
+      frags+=("${frag}")
+    else
+      echo "Skipping missing defconfig fragment: ${frag}"
+    fi
+  done
+fi
+
+make ${MAKE_ARGS} "${defconfig_target}" "${frags[@]}"
 
 EXTRA_CFG="out/ci-extra.config"
 : > "${EXTRA_CFG}"
