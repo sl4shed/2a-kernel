@@ -109,8 +109,8 @@ jobs:
     env:
       KERNEL_DIR: kernel
       ANYKERNEL_DIR: AnyKernel3
-      DEFCONFIG: ${{ inputs.kernel_defconfig || 'gki_defconfig' }}
-      DEFCONFIG_FRAGS: ${{ inputs.extra_configs || 'vendor/waipio_GKI.config vendor/nothing/waipio_GKI.config vendor/debugfs.config' }}
+      DEFCONFIG: ${{ inputs.kernel_defconfig }}
+      DEFCONFIG_FRAGS: ${{ inputs.extra_configs }}
       MAKE_ARGS: >-
         ARCH=arm64
         CROSS_COMPILE=aarch64-linux-gnu-
