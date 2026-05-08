@@ -2,31 +2,35 @@
 set -euo pipefail
 
 cd "${KERNEL_DIR}"
-defconfig_target="${DEFCONFIG}"
-defconfig_path="${DEFCONFIG}"
-if [ -n "${DEFCONFIG}" ] && echo "${DEFCONFIG}" | grep -q '^/'; then
-  defconfig_path="${DEFCONFIG#/}"
-  defconfig_target="$(basename "${defconfig_path}")"
+
+defconfig_targets=()
+defconfig_paths=()
+if [ -n "${DEFCONFIG:-}" ]; then
+  for def in ${DEFCONFIG}; do
+    if echo "${def}" | grep -q '^/'; then
+      def_path="${def#/}"
+    else
+      def_path="arch/arm64/configs/${def}"
+    fi
+
+    if [ ! -f "${def_path}" ]; then
+      echo "Defconfig path not found: ${def_path}" >&2
+      exit 1
+    fi
+
+    def_target="$(basename "${def_path}")"
+    if [ "${def_path}" != "arch/arm64/configs/${def_target}" ]; then
+      cp "${def_path}" "arch/arm64/configs/${def_target}"
+    fi
+
+    defconfig_targets+=("${def_target}")
+    defconfig_paths+=("arch/arm64/configs/${def_target}")
+  done
 fi
 
-if [ -n "${defconfig_path}" ] && echo "${defconfig_path}" | grep -q '/'; then
-  if [ -f "${defconfig_path}" ]; then
-    defconfig_target="$(basename "${defconfig_path}")"
-    if [ "${defconfig_path}" != "arch/arm64/configs/${defconfig_target}" ]; then
-      cp "${defconfig_path}" "arch/arm64/configs/${defconfig_target}"
-    fi
-  else
-    echo "Defconfig path not found: ${defconfig_path}" >&2
-    exit 1
-  fi
-elif [ -n "${defconfig_path}" ]; then
-  if [ -f "${defconfig_path}" ] && [ ! -f "arch/arm64/configs/${defconfig_path}" ]; then
-    cp "${defconfig_path}" "arch/arm64/configs/${defconfig_path}"
-  fi
-  if [ ! -f "arch/arm64/configs/${defconfig_path}" ]; then
-    echo "Defconfig not found in arch/arm64/configs: ${defconfig_path}" >&2
-    exit 1
-  fi
+if [ "${#defconfig_targets[@]}" -lt 1 ]; then
+  echo "No defconfig provided" >&2
+  exit 1
 fi
 
 frags=()
@@ -42,7 +46,24 @@ if [ -n "${DEFCONFIG_FRAGS:-}" ]; then
   done
 fi
 
-make ${MAKE_ARGS} "${defconfig_target}" "${frags[@]}"
+make ${MAKE_ARGS} "${defconfig_targets[0]}"
+
+merge_frags=()
+if [ "${#defconfig_paths[@]}" -gt 1 ]; then
+  merge_frags+=("${defconfig_paths[@]:1}")
+fi
+if [ "${#frags[@]}" -gt 0 ]; then
+  merge_frags+=("${frags[@]}")
+fi
+
+if [ "${#merge_frags[@]}" -gt 0 ]; then
+  if [ -x "scripts/kconfig/merge_config.sh" ]; then
+    scripts/kconfig/merge_config.sh -m -O out out/.config "${merge_frags[@]}"
+  else
+    echo "merge_config.sh not found; cannot apply defconfig fragments" >&2
+    exit 1
+  fi
+fi
 
 EXTRA_CFG="out/ci-extra.config"
 : > "${EXTRA_CFG}"
