@@ -47,4 +47,4 @@ jobs:
       kpm_support: true
       susfs_support: true
       susfs_force: false
-      bbg_support: true
+      bbg_support: false
