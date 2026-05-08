@@ -57,6 +57,11 @@ on:
         required: false
         type: boolean
         default: false
+      kernel_type:
+        description: 'Kernel type identifier (arter97, NothingOSS, LineageOS)'
+        required: false
+        type: string
+        default: 'LineageOS'
 
   workflow_call:
     inputs:
@@ -101,6 +106,10 @@ on:
         required: false
         type: boolean
         default: false
+      kernel_type:
+        required: false
+        type: string
+        default: 'LineageOS'
 
 jobs:
   build:
@@ -225,13 +234,13 @@ jobs:
 
       - name: Package AnyKernel3
         run: |
-          Scripts/package_anykernel.sh
+          KERNEL_TYPE="${{ inputs.kernel_type || 'LineageOS' }}" Scripts/package_anykernel.sh
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: kernel-NP2-ReSukiSU
-          path: "*.zip"
+          name: kernel-${{ inputs.kernel_type || 'LineageOS' }}-NP2-ReSukiSU
+          path: "kernel-${{ inputs.kernel_type || 'LineageOS' }}-NP2-ReSukiSU.zip"
           retention-days: 30
 
       - name: Upload .config for debugging

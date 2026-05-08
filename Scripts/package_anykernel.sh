@@ -12,5 +12,6 @@ cp "${KERNEL_DIR}/out/arch/arm64/boot/Image.gz" "${ANYKERNEL_DIR}/" 2>/dev/null 
 cp Scripts/anykernel.sh "${ANYKERNEL_DIR}/anykernel.sh"
 
 cd "${ANYKERNEL_DIR}"
-ZIP_NAME="ReSukiSU-NP2-Pong.zip"
+KERNEL_TYPE="${KERNEL_TYPE:-LineageOS}"
+ZIP_NAME="kernel-${KERNEL_TYPE}-NP2-ReSukiSU.zip"
 zip -r9 "../${ZIP_NAME}" ./*
