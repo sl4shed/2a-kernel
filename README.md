@@ -1,3 +1,7 @@
+## NP2 kernel for the Nothing Phone 2a
+
+This repository is a fork of the [NP2 kernel](https://github.com/MiguVT/NP2_Kernel) repository. I changed the workflow SLIGHTLY to be able to compile the [Nothing Phone 2a kernel](https://github.com/NothingOSS/android_kernel_5.15_nothing_mt6886) instead.
+
 ## Features
 
 - **[ReSukiSU](https://github.com/ReSukiSU/ReSukiSU)**: Kernel-level root (SukiSU-Ultra fork)
@@ -7,7 +11,7 @@
 
 ## Install
 
-1. Download the Kernel zip variant you want from [Releases](https://github.com/MiguVT/NP2_Kernel/releases)
+1. Download the Kernel zip variant you want from [Releases](https://github.com/sl4shed/2a-kernel/releases)
 2. Boot into recovery (TWRP / OrangeFox)
 3. Flash the zip → reboot
 4. Install [ReSukiSU Manager](https://resukisu.github.io/guide/install.html#Get-manager) to manage root (Under development but recommended), you could use other KSU-based manager but no guarantee
@@ -16,9 +20,15 @@
 
 ## Build it yourself
 
+### Option 1: Github Workflows
 1. Fork this repo
-2. Go to **Actions** → **Build 2a Kernel** → **Run workflow**
+2. Go to **Actions** → **Build Kernel** → **Run workflow**
 3. Download the zip from the completed run
+
+### Option 2: [act](https://github.com/nektos/act)
+1. Clone this repo
+2. [Install act](https://nektosact.com/installation/index.html)
+3. Run `act workflow_dispatch` in the repository's root folder. (select medium image)
 
 ## Credits
 
