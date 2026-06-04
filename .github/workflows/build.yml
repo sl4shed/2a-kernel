@@ -26,7 +26,7 @@ on:
         description: 'Extra config fragments (space-separated, start with / if it is in the kernel root)'
         required: false
         type: string
-        default: 'vendor/waipio_GKI.config vendor/nothing/waipio_GKI.config vendor/debugfs.config'
+        default: ''
       kpm_support:
         description: 'Enable KPM support'
         required: false
@@ -81,7 +81,7 @@ on:
       extra_configs:
         required: false
         type: string
-        default: 'vendor/waipio_GKI.config vendor/nothing/waipio_GKI.config vendor/debugfs.config'
+        default: ''
       kpm_support:
         required: false
         type: boolean
