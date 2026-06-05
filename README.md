@@ -30,6 +30,17 @@ This repository is a fork of the [NP2 kernel](https://github.com/MiguVT/NP2_Kern
 2. [Install act](https://nektosact.com/installation/index.html)
 3. Run `act workflow_dispatch` in the repository's root folder. (select medium image)
 
+### Option 3: Manual build
+```bash
+git clone https://github.com/sl4shed/2a-kernel
+
+cd 2a-kernel
+source ./scripts/manual/setup-vars.sh
+./scripts/manual/setup-repos.sh
+
+./scripts/build_kernel.sh
+```
+
 ## Credits
 
 - [MiguVT](https://github.com/MiguVT) - NP2 Kernel

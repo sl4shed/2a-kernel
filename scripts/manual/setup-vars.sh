@@ -1,7 +1,7 @@
 #!/bin/bash
 
-export KERNEL_DIR="kernel"
-export ANYKERNEL_DIR="AnyKernel13"
+export KERNEL_DIR="$(realpath kernel)"
+export ANYKERNEL_DIR="$(realpath AnyKernel13)"
 export MAKE_ARGS="
         ARCH=arm64
         CROSS_COMPILE=aarch64-linux-gnu-
@@ -10,7 +10,7 @@ export MAKE_ARGS="
         LD=ld.lld HOSTLD=ld.lld
         CC=clang CXX=clang++
         HOSTCC=clang HOSTCXX=clang++
-        O=out
+        O=\"$KERNEL_DIR/out\"
 "
 
 export KERNEL_TYPE="NothingOSS"

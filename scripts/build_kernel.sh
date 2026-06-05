@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-cd "${KERNEL_DIR}"
-
 defconfig_targets=()
 defconfig_paths=()
 if [ -n "${DEFCONFIG:-}" ]; then
@@ -10,7 +8,7 @@ if [ -n "${DEFCONFIG:-}" ]; then
     if echo "${def}" | grep -q '^/'; then
       def_path="${def#/}"
     else
-      def_path="arch/arm64/configs/${def}"
+      def_path="${KERNEL_DIR}/arch/arm64/configs/${def}"
     fi
 
     if [ ! -f "${def_path}" ]; then
@@ -19,12 +17,12 @@ if [ -n "${DEFCONFIG:-}" ]; then
     fi
 
     def_target="$(basename "${def_path}")"
-    if [ "${def_path}" != "arch/arm64/configs/${def_target}" ]; then
-      cp "${def_path}" "arch/arm64/configs/${def_target}"
+    if [ "${def_path}" != "${KERNEL_DIR}/arch/arm64/configs/${def_target}" ]; then
+      cp "${def_path}" "${KERNEL_DIR}/arch/arm64/configs/${def_target}"
     fi
 
     defconfig_targets+=("${def_target}")
-    defconfig_paths+=("arch/arm64/configs/${def_target}")
+    defconfig_paths+=("${KERNEL_DIR}/arch/arm64/configs/${def_target}")
   done
 fi
 
@@ -38,15 +36,15 @@ if [ -n "${DEFCONFIG_FRAGS:-}" ]; then
   for frag in ${DEFCONFIG_FRAGS}; do
     if [ -f "${frag}" ]; then
       frags+=("${frag}")
-    elif [ -f "arch/arm64/configs/${frag}" ]; then
-      frags+=("arch/arm64/configs/${frag}")
+    elif [ -f "${KERNEL_DIR}/arch/arm64/configs/${frag}" ]; then
+      frags+=("${KERNEL_DIR}/arch/arm64/configs/${frag}")
     else
       echo "Skipping missing defconfig fragment: ${frag}"
     fi
   done
 fi
 
-make ${MAKE_ARGS} "${defconfig_targets[0]}"
+make -C "${KERNEL_DIR}" ${MAKE_ARGS} "${defconfig_targets[0]}"
 
 merge_frags=()
 if [ "${#defconfig_paths[@]}" -gt 1 ]; then
@@ -57,15 +55,15 @@ if [ "${#frags[@]}" -gt 0 ]; then
 fi
 
 if [ "${#merge_frags[@]}" -gt 0 ]; then
-  if [ -x "scripts/kconfig/merge_config.sh" ]; then
-    scripts/kconfig/merge_config.sh -m -O out out/.config "${merge_frags[@]}"
+  if [ -x "${KERNEL_DIR}/scripts/kconfig/merge_config.sh" ]; then
+    ${KERNEL_DIR}/scripts/kconfig/merge_config.sh -m -O "${KERNEL_DIR}/out" "${KERNEL_DIR}/out/.config" "${merge_frags[@]}"
   else
     echo "merge_config.sh not found; cannot apply defconfig fragments" >&2
     exit 1
   fi
 fi
 
-EXTRA_CFG="out/ci-extra.config"
+EXTRA_CFG="${KERNEL_DIR}/out/ci-extra.config"
 : > "${EXTRA_CFG}"
 echo "CONFIG_KSU=y" >> "${EXTRA_CFG}"
 
@@ -84,16 +82,18 @@ if [ "${BBG_SUPPORT}" = "true" ]; then
   echo "CONFIG_BBG=y" >> "${EXTRA_CFG}"
 fi
 
-cat "${EXTRA_CFG}" >> out/.config
-make ${MAKE_ARGS} olddefconfig
-[ -f scripts/setlocalversion ] && sed -i 's/-dirty//g' scripts/setlocalversion || true
+cat "${EXTRA_CFG}" >> "${KERNEL_DIR}/out/.config"
+
+make -C "${KERNEL_DIR}" ${MAKE_ARGS} olddefconfig
+[ -f "${KERNEL_DIR}/scripts/setlocalversion" ] && sed -i 's/-dirty//g' "${KERNEL_DIR}/scripts/setlocalversion" || true
 
 JOBS=$(( $(nproc) / 2 ))
 [ "${JOBS}" -lt 1 ] && JOBS=1
-make -j1 ${MAKE_ARGS} Image KCFLAGS="-Wno-error"
+export srctree="$KERNEL_DIR"
+make -C "${KERNEL_DIR}" -j"${JOBS}" ${MAKE_ARGS} srctree="${KERNEL_DIR}" Image KCFLAGS="-Wno-error"
 
 if [ "${KPM_SUPPORT}" = "true" ]; then
-  cd out/arch/arm64/boot/
+  cd "${KERNEL_DIR}/out/arch/arm64/boot/"
   python3 - <<'PY'
 import json
 import sys

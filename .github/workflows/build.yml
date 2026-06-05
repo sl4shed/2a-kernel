@@ -210,8 +210,8 @@ jobs:
 
       - name: Prepare build scripts
         run: |
-          chmod +x Scripts/build_kernel.sh
-          chmod +x Scripts/package_anykernel.sh
+          chmod +x scripts/build_kernel.sh
+          chmod +x scripts/package_anykernel.sh
 
       - name: Enable swap space
         run: |
@@ -230,11 +230,11 @@ jobs:
           SUSFS_SUPPORT="${{ inputs.susfs_support }}" \
           KPM_SUPPORT="${{ inputs.kpm_support }}" \
           BBG_SUPPORT="${{ inputs.bbg_support }}" \
-          Scripts/build_kernel.sh
+          scripts/build_kernel.sh
 
       - name: Package AnyKernel3
         run: |
-          KERNEL_TYPE="${{ inputs.kernel_type || 'LineageOS' }}" Scripts/package_anykernel.sh
+          KERNEL_TYPE="${{ inputs.kernel_type || 'LineageOS' }}" scripts/package_anykernel.sh
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
