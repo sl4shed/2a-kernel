@@ -82,8 +82,16 @@ if [ "${BBG_SUPPORT}" = "true" ]; then
   echo "CONFIG_BBG=y" >> "${EXTRA_CFG}"
 fi
 
+for cfg in ${EXTRA_USER_CFG}; do
+  key="${cfg%=*}"
+  val="${cfg#*=}"
+  case "$val" in
+    n) "${KERNEL_DIR}/scripts/config" --file "${KERNEL_DIR}/out/.config" --disable "$key" ;;
+    y) "${KERNEL_DIR}/scripts/config" --file "${KERNEL_DIR}/out/.config" --enable "$key" ;;
+  esac
+done
+
 cat "${EXTRA_CFG}" >> "${KERNEL_DIR}/out/.config"
-echo "${EXTRA_USER_CFG}" >> "${KERNEL_DIR}/out/.config"
 
 make -C "${KERNEL_DIR}" ${MAKE_ARGS} olddefconfig
 [ -f "${KERNEL_DIR}/scripts/setlocalversion" ] && sed -i 's/-dirty//g' "${KERNEL_DIR}/scripts/setlocalversion" || true
