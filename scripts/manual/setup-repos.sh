@@ -5,6 +5,9 @@ set -euo pipefail
 echo "Cloning kernel sources..."
 git clone --depth=1 -b "$KERNEL_BRANCH" "$KERNEL_REPO" "$KERNEL_DIR" 
 
+echo "Cloning kernel modules..."
+git clone --depth=1 -b "$KERNEL_MODULES_BRANCH" "$KERNEL_MODULES_REPO" "$KERNEL_MODULES_PATH"
+
 echo "Cloning AnyKernel3..."
 git clone --depth=1 https://github.com/osm0sis/AnyKernel3.git "$ANYKERNEL_DIR"
 rm -rf "$ANYKERNEL_DIR/.git"

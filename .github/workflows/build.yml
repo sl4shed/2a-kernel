@@ -63,53 +63,53 @@ on:
         type: string
         default: 'NothingOSS'
 
-  workflow_call:
-    inputs:
-      kernel_repo:
-        required: false
-        type: string
-        default: 'https://github.com/NothingOSS/android_kernel_5.15_nothing_mt6886'
-      kernel_branch:
-        required: false
-        type: string
-        default: 'mt6886/Pacman/t'
-      kernel_defconfig:
-        description: 'Defconfig(s), space-separated. Use /name if it is in the kernel root; otherwise arch/arm64/configs/name is used.'
-        required: false
-        type: string
-        default: 'gki_defconfig'
-      extra_configs:
-        required: false
-        type: string
-        default: ''
-      kpm_support:
-        required: false
-        type: boolean
-        default: true
-      susfs_support:
-        required: false
-        type: boolean
-        default: true
-      susfs_branch:
-        required: false
-        type: string
-        default: 'gki-android13-5.15'
-      extra_patches_dir:
-        required: false
-        type: string
-        default: ''
-      bbg_support:
-        required: false
-        type: boolean
-        default: true
-      susfs_force:
-        required: false
-        type: boolean
-        default: false
-      kernel_type:
-        required: false
-        type: string
-        default: 'NothingOSS'
+  # workflow_call:
+  #   inputs:
+  #     kernel_repo:
+  #       required: false
+  #       type: string
+  #       default: 'https://github.com/NothingOSS/android_kernel_5.15_nothing_mt6886'
+  #     kernel_branch:
+  #       required: false
+  #       type: string
+  #       default: 'mt6886/Pacman/t'
+  #     kernel_defconfig:
+  #       description: 'Defconfig(s), space-separated. Use /name if it is in the kernel root; otherwise arch/arm64/configs/name is used.'
+  #       required: false
+  #       type: string
+  #       default: 'gki_defconfig'
+  #     extra_configs:
+  #       required: false
+  #       type: string
+  #       default: ''
+  #     kpm_support:
+  #       required: false
+  #       type: boolean
+  #       default: true
+  #     susfs_support:
+  #       required: false
+  #       type: boolean
+  #       default: true
+  #     susfs_branch:
+  #       required: false
+  #       type: string
+  #       default: 'gki-android13-5.15'
+  #     extra_patches_dir:
+  #       required: false
+  #       type: string
+  #       default: ''
+  #     bbg_support:
+  #       required: false
+  #       type: boolean
+  #       default: true
+  #     susfs_force:
+  #       required: false
+  #       type: boolean
+  #       default: false
+  #     kernel_type:
+  #       required: false
+  #       type: string
+  #       default: 'NothingOSS'
 
 jobs:
   build:

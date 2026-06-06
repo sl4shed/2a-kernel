@@ -11,6 +11,8 @@ export MAKE_ARGS="
         CC=clang CXX=clang++
         HOSTCC=clang HOSTCXX=clang++
         O=\"$KERNEL_DIR/out\"
+		LTO_NONE=y LTO_CLANG=n
+		CONFIG_LTO_CLANG=n CONFIG_LTO_CLANG_THIN=n CONFIG_LTO_NONE=y CONFIG_LTO_CLANG_FULL=n LTO_CLANG_FULL=n LTO_CLANG_THIN=n
 "
 
 export KERNEL_TYPE="NothingOSS"
@@ -18,7 +20,27 @@ export DEFCONFIG="gki_defconfig"
 export DEFCONFIG_FRAGS=""
 export KERNEL_REPO="https://github.com/NothingOSS/android_kernel_5.15_nothing_mt6886"
 export KERNEL_BRANCH="mt6886/Pacman/t"
+export KERNEL_MODULES_REPO="https://github.com/NothingOSS/android_kernel_modules_nothing_mt6886/"
+export KERNEL_MODULES_BRANCH="mt6886/Pacman/t"
+export KERNEL_MODULES_PATH="$KERNEL_DIR/vendor/mediatek/kernel_modules"
 export KPM_SUPPORT="true"
 export SUSFS_SUPPORT="true"
 export SUSFS_BRANCH="gki-android13-5.15"
 export BBG_SUPPORT="true"
+
+export DEFCONFIG_FRAGS="
+LTO_CLANG=n
+LTO_CLANG_THIN=n
+LTO=n
+LTO_NONE=y
+
+# poopoo shit
+# CONFIG_ARCH_MEDIATEK=y
+# CONFIG_DRM_MEDIATEK_V2=y
+# CONFIG_MTK_SECURITY_SW_SUPPORT=y
+# CONFIG_SCSI_UFS_MEDIATEK=y
+# CONFIG_NFC_CHIP_SUPPORT=y
+# CONFIG_NFC_ST21NFC=y
+"
+
+export EXTRAS_USER_CFG=""

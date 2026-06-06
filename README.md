@@ -1,6 +1,8 @@
 ## NP2 kernel for the Nothing Phone 2a
 
-This repository is a fork of the [NP2 kernel](https://github.com/MiguVT/NP2_Kernel) repository. I changed the workflow SLIGHTLY to be able to compile the [Nothing Phone 2a kernel](https://github.com/NothingOSS/android_kernel_5.15_nothing_mt6886) instead.
+![image](https://socialify.git.ci/sl4shed/2a-kernel/image?custom_description=A+custom+Nothing+Phone+2a+kernel+with+ReSukiSU+%2B+SuSFS&description=1&font=Inter&forks=1&issues=1&language=1&name=1&owner=1&pattern=Circuit+Board&pulls=1&stargazers=1&theme=Auto)
+
+This repository is a fork of the [NP2 kernel](https://github.com/MiguVT/NP2_Kernel) repository. I added a bunch of features to be able to compile the  [Nothing Phone 2a kernel](https://github.com/NothingOSS/android_kernel_5.15_nothing_mt6886) instead.
 
 ## Features
 
@@ -33,11 +35,12 @@ This repository is a fork of the [NP2 kernel](https://github.com/MiguVT/NP2_Kern
 ### Option 3: Manual build
 ```bash
 git clone https://github.com/sl4shed/2a-kernel
-
 cd 2a-kernel
-source ./scripts/manual/setup-vars.sh
+
+source ./scripts/manual/setup-vars.sh # If you want to build a different kernel, you can customize this script!
 ./scripts/manual/setup-repos.sh
 
+# grab a cup of coffee or tea, this is gonna take >1h
 ./scripts/build_kernel.sh
 ```
 

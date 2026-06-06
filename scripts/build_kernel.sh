@@ -83,6 +83,7 @@ if [ "${BBG_SUPPORT}" = "true" ]; then
 fi
 
 cat "${EXTRA_CFG}" >> "${KERNEL_DIR}/out/.config"
+echo "${EXTRA_USER_CFG}" >> "${KERNEL_DIR}/out/.config"
 
 make -C "${KERNEL_DIR}" ${MAKE_ARGS} olddefconfig
 [ -f "${KERNEL_DIR}/scripts/setlocalversion" ] && sed -i 's/-dirty//g' "${KERNEL_DIR}/scripts/setlocalversion" || true
