@@ -9,14 +9,14 @@ This repository is a fork of the [NP2 kernel](https://github.com/MiguVT/NP2_Kern
 - **[ReSukiSU](https://github.com/ReSukiSU/ReSukiSU)**: Kernel-level root (SukiSU-Ultra fork)
 - **[SUSFS](https://gitlab.com/simonpunk/susfs4ksu)**: Hide root from banking apps, games, and safety checks
 - **[BaseBandGuard](https://github.com/vc-teahouse/Baseband-guard)**: Prevent apps and modules from modifying critical files.
-- **KPM Support**: Kernels have KPM support, this is possible thanks to [KernelPatch by SukiSU-Ultra](https://github.com/SukiSU-Ultra/SukiSU_KernelPatch_patch)
+- **[KernelPatch](https://github.com/SukiSU-Ultra/SukiSU_KernelPatch_patch)**: Kernels have KPM support now
 
 ## Install
 
 1. Download the Kernel zip variant you want from [Releases](https://github.com/sl4shed/2a-kernel/releases)
 2. Boot into recovery (TWRP / OrangeFox)
-3. Flash the zip → reboot
-4. Install [ReSukiSU Manager](https://resukisu.github.io/guide/install.html#Get-manager) to manage root (Under development but recommended), you could use other KSU-based manager but no guarantee
+3. Flash the zip -> reboot
+4. Install [ReSukiSU Manager](https://resukisu.github.io/guide/install.html#Get-manager) to manage root
 
 > **Backup your stock boot image first.** Bootloader must be unlocked. Use at your own risk.
 
@@ -24,7 +24,7 @@ This repository is a fork of the [NP2 kernel](https://github.com/MiguVT/NP2_Kern
 
 ### Option 1: Github Workflows
 1. Fork this repo
-2. Go to **Actions** → **Build Kernel** → **Run workflow**
+2. Go to **Actions** -> **Build Kernel** -> **Run workflow**
 3. Download the zip from the completed run
 
 ### Option 2: [act](https://github.com/nektos/act)
@@ -44,6 +44,16 @@ source ./scripts/manual/setup_vars.sh # If you want to build a different kernel,
 ./scripts/build_kernel.sh
 ```
 
+## Credits
+
+- [MiguVT](https://github.com/MiguVT) - NP2 Kernel
+- [ReSukiSU maintainers & contributors](https://github.com/ReSukiSU/ReSukiSU) - ReSukiSU
+- [simonpunk](https://gitlab.com/simonpunk/susfs4ksu) - SUSFS
+- [osm0sis](https://github.com/osm0sis/AnyKernel3) - AnyKernel3
+- [vc-teahouse & contributors](https://github.com/vc-teahouse/Baseband-guard) - BaseBandGuard
+
+# claude schizophrenia zone (IGNORE)
+
 ### Notes on the 2a kernel source
 
 Nothing's `android13-5.15` tree doesn't build a GKI `Image` out of the box. The fixes live in
@@ -57,11 +67,3 @@ Nothing's `android13-5.15` tree doesn't build a GKI `Image` out of the box. The 
 
 The SUSFS patch is applied through `scripts/apply_susfs.sh`, which strips two vendor `#include <trace/hooks/...>`
 context lines that the 2a tree doesn't have. Builds use ThinLTO, because full LTO needs more than 16GB of RAM to link.
-
-## Credits
-
-- [MiguVT](https://github.com/MiguVT) - NP2 Kernel
-- [ReSukiSU maintainers & contributors](https://github.com/ReSukiSU/ReSukiSU) - ReSukiSU
-- [simonpunk](https://gitlab.com/simonpunk/susfs4ksu) - SUSFS
-- [osm0sis](https://github.com/osm0sis/AnyKernel3) - AnyKernel3
-- [vc-teahouse & contributors](https://github.com/vc-teahouse/Baseband-guard) - BaseBandGuard
