@@ -37,12 +37,26 @@ This repository is a fork of the [NP2 kernel](https://github.com/MiguVT/NP2_Kern
 git clone https://github.com/sl4shed/2a-kernel
 cd 2a-kernel
 
-source ./scripts/manual/setup-vars.sh # If you want to build a different kernel, you can customize this script!
-./scripts/manual/setup-repos.sh
+source ./scripts/manual/setup_vars.sh # If you want to build a different kernel, you can customize this script!
+./scripts/manual/setup_repos.sh
 
 # grab a cup of coffee or tea, this is gonna take >1h
 ./scripts/build_kernel.sh
 ```
+
+### Notes on the 2a kernel source
+
+Nothing's `android13-5.15` tree doesn't build a GKI `Image` out of the box. The fixes live in
+`patches/nothing-2a/` and are applied automatically by both the workflow and `setup_repos.sh`:
+
+- `0001-fix-host-build-tools.patch`: lets `extract-cert` build against OpenSSL 3/4 without the ENGINE API,
+  and makes `gen_kheaders.sh` use the system `cpio` instead of a bundled prebuilt.
+- `0002-hardware_info-do-not-build-into-gki.patch`: Nothing's `hardware_info` driver was `default y`, so
+  `gki_defconfig` built it into the kernel, where it fails to link against MediaTek vendor-module symbols
+  (`get_lcm_id`, `ufs_get_hardware_info`, ...). On the phone it ships as a vendor module, so it's left out of the GKI image.
+
+The SUSFS patch is applied through `scripts/apply_susfs.sh`, which strips two vendor `#include <trace/hooks/...>`
+context lines that the 2a tree doesn't have. Builds use ThinLTO, because full LTO needs more than 16GB of RAM to link.
 
 ## Credits
 

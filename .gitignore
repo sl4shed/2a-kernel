@@ -1,3 +1,7 @@
-AnyKernel13
-kernel
-susfs4ksu
+# Cloned by scripts/manual/setup_repos.sh (and the workflow)
+/kernel/
+/susfs4ksu/
+/AnyKernel3/
+
+# Build output
+/kernel-*.zip

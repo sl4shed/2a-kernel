@@ -82,7 +82,7 @@ if [ "${BBG_SUPPORT}" = "true" ]; then
   echo "CONFIG_BBG=y" >> "${EXTRA_CFG}"
 fi
 
-for cfg in ${EXTRA_USER_CFG}; do
+for cfg in ${EXTRA_USER_CFG:-}; do
   key="${cfg%=*}"
   val="${cfg#*=}"
   case "$val" in
@@ -98,8 +98,7 @@ make -C "${KERNEL_DIR}" ${MAKE_ARGS} olddefconfig
 
 JOBS=$(( $(nproc) / 2 ))
 [ "${JOBS}" -lt 1 ] && JOBS=1
-export srctree="$KERNEL_DIR"
-make -C "${KERNEL_DIR}" -j"${JOBS}" ${MAKE_ARGS} srctree="${KERNEL_DIR}" Image KCFLAGS="-Wno-error"
+make -C "${KERNEL_DIR}" -j"${JOBS}" ${MAKE_ARGS} Image KCFLAGS="-Wno-error"
 
 if [ "${KPM_SUPPORT}" = "true" ]; then
   cd "${KERNEL_DIR}/out/arch/arm64/boot/"

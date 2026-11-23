@@ -1,0 +1,38 @@
+diff --git a/kernel/gen_kheaders.sh b/kernel/gen_kheaders.sh
+index 3a655e53a..dd69b6afe 100755
+--- a/kernel/gen_kheaders.sh
++++ b/kernel/gen_kheaders.sh
+@@ -8,7 +8,7 @@ sfile="$(readlink -f "$0")"
+ outdir="$(pwd)"
+ tarfile=$1
+ cpio_dir=$outdir/$tarfile.tmp
+-cpio=$srctree/tools/build/cpio
++cpio=cpio
+ tar=$srctree/tools/build/tar
+ 
+ dir_list="
+diff --git a/scripts/extract-cert.c b/scripts/extract-cert.c
+index 71b298023..aff79ecf5 100644
+--- a/scripts/extract-cert.c
++++ b/scripts/extract-cert.c
+@@ -21,7 +21,9 @@
+ #include <openssl/bio.h>
+ #include <openssl/pem.h>
+ #include <openssl/err.h>
++#ifndef OPENSSL_NO_ENGINE
+ #include <openssl/engine.h>
++#endif
+ 
+ /*
+  * OpenSSL 3.0 deprecates the OpenSSL's ENGINE API.
+@@ -121,8 +123,8 @@ int main(int argc, char **argv)
+ 		fclose(f);
+ 		exit(0);
+ 	} else if (!strncmp(cert_src, "pkcs11:", 7)) {
+-#ifdef OPENSSL_IS_BORINGSSL
+-		ERR(1, "BoringSSL does not support extracting from PKCS#11");
++#if defined(OPENSSL_IS_BORINGSSL) || defined(OPENSSL_NO_ENGINE)
++		ERR(1, "This OpenSSL build does not support extracting from PKCS#11");
+ 		exit(1);
+ #else
+ 		ENGINE *e;

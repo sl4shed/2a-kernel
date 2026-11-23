@@ -1,29 +1,54 @@
-name: Build  Kernel
+name: Build Kernel
 
 permissions:
   contents: write
   actions: write
 
+# This workflow runs the same scripts as the manual build (see README):
+#   source scripts/manual/setup_vars.sh -> scripts/manual/setup_repos.sh
+#   -> scripts/build_kernel.sh -> scripts/package_anykernel.sh
+# Empty string inputs fall back to the defaults in scripts/manual/setup_vars.sh.
+
 on:
   workflow_dispatch:
     inputs:
       kernel_repo:
-        description: 'Kernel source repo'
+        description: 'Kernel source repo (empty = setup_vars.sh default, NothingOSS mt6886)'
         required: false
         type: string
-        default: 'https://github.com/NothingOSS/android_kernel_5.15_nothing_mt6886'
+        default: ''
       kernel_branch:
-        description: 'Kernel branch'
+        description: 'Kernel branch (empty = setup_vars.sh default, mt6886/Pacman/16b)'
         required: false
         type: string
-        default: 'mt6886/Pacman/t'
+        default: ''
       kernel_defconfig:
-        description: 'Defconfig(s), space-separated. Use /name if it is in the kernel root; otherwise arch/arm64/configs/name is used.'
+        description: 'Defconfig(s), space-separated. Use /name if it is in the kernel root (empty = gki_defconfig)'
         required: false
         type: string
-        default: 'gki_defconfig'
+        default: ''
       extra_configs:
         description: 'Extra config fragments (space-separated, start with / if it is in the kernel root)'
+        required: false
+        type: string
+        default: ''
+      extra_user_cfg:
+        description: 'Space-separated CONFIG_X=y/n overrides (empty = setup_vars.sh default, ThinLTO)'
+        required: false
+        type: string
+        default: ''
+      extra_patches_dir:
+        description: 'Repo-local patch directory applied after cloning (empty = patches/nothing-2a)'
+        required: false
+        type: string
+        default: ''
+      susfs_branch:
+        description: 'SUSFS branch, also selects the patch name (empty = gki-android13-5.15)'
+        required: false
+        type: string
+        default: ''
+      kernel_type:
+        description: 'Kernel type identifier used in the zip name (empty = NothingOSS)'
         required: false
         type: string
         default: ''
@@ -37,98 +62,34 @@ on:
         required: false
         type: boolean
         default: true
-      susfs_branch:
-        description: 'SUSFS branch (also selects patch name)'
-        required: false
-        type: string
-        default: 'gki-android13-5.15'
-      extra_patches_dir:
-        description: 'Extra patch directory (repo-local)'
-        required: false
-        type: string
-        default: ''
-      bbg_support:
-        description: 'Enable BBG support'
-        required: false
-        type: boolean
-        default: true
       susfs_force:
         description: 'Force SUSFS patch apply (ignore failures)'
         required: false
         type: boolean
         default: false
-      kernel_type:
-        description: 'Kernel type identifier (arter97, NothingOSS, LineageOS)'
+      bbg_support:
+        description: 'Enable BBG support'
         required: false
-        type: string
-        default: 'NothingOSS'
-
-  # workflow_call:
-  #   inputs:
-  #     kernel_repo:
-  #       required: false
-  #       type: string
-  #       default: 'https://github.com/NothingOSS/android_kernel_5.15_nothing_mt6886'
-  #     kernel_branch:
-  #       required: false
-  #       type: string
-  #       default: 'mt6886/Pacman/t'
-  #     kernel_defconfig:
-  #       description: 'Defconfig(s), space-separated. Use /name if it is in the kernel root; otherwise arch/arm64/configs/name is used.'
-  #       required: false
-  #       type: string
-  #       default: 'gki_defconfig'
-  #     extra_configs:
-  #       required: false
-  #       type: string
-  #       default: ''
-  #     kpm_support:
-  #       required: false
-  #       type: boolean
-  #       default: true
-  #     susfs_support:
-  #       required: false
-  #       type: boolean
-  #       default: true
-  #     susfs_branch:
-  #       required: false
-  #       type: string
-  #       default: 'gki-android13-5.15'
-  #     extra_patches_dir:
-  #       required: false
-  #       type: string
-  #       default: ''
-  #     bbg_support:
-  #       required: false
-  #       type: boolean
-  #       default: true
-  #     susfs_force:
-  #       required: false
-  #       type: boolean
-  #       default: false
-  #     kernel_type:
-  #       required: false
-  #       type: string
-  #       default: 'NothingOSS'
+        type: boolean
+        default: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
-      KERNEL_DIR: kernel
-      ANYKERNEL_DIR: AnyKernel3
+      KERNEL_REPO: ${{ inputs.kernel_repo }}
+      KERNEL_BRANCH: ${{ inputs.kernel_branch }}
       DEFCONFIG: ${{ inputs.kernel_defconfig }}
       DEFCONFIG_FRAGS: ${{ inputs.extra_configs }}
-      MAKE_ARGS: >-
-        ARCH=arm64
-        CROSS_COMPILE=aarch64-linux-gnu-
-        CROSS_COMPILE_COMPAT=arm-linux-gnueabi-
-        LLVM=1 LLVM_IAS=1
-        LD=ld.lld HOSTLD=ld.lld
-        CC=clang CXX=clang++
-        HOSTCC=clang HOSTCXX=clang++
-        O=out
+      EXTRA_USER_CFG: ${{ inputs.extra_user_cfg }}
+      EXTRA_PATCHES_DIR: ${{ inputs.extra_patches_dir }}
+      SUSFS_BRANCH: ${{ inputs.susfs_branch }}
+      KERNEL_TYPE: ${{ inputs.kernel_type }}
+      KPM_SUPPORT: ${{ inputs.kpm_support }}
+      SUSFS_SUPPORT: ${{ inputs.susfs_support }}
+      SUSFS_FORCE: ${{ inputs.susfs_force }}
+      BBG_SUPPORT: ${{ inputs.bbg_support }}
 
     steps:
       - name: Checkout repo
@@ -140,78 +101,22 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             build-essential bc bison flex libelf-dev libssl-dev ccache \
             lz4 zip python3 clang llvm lld gcc-aarch64-linux-gnu \
-            gcc-arm-linux-gnueabi wget cpio
+            gcc-arm-linux-gnueabi wget curl cpio dwarves
 
-      # - name: Setup LLVM toolchain path (arter97 compat)
-      #   if: ${{ contains(inputs.kernel_repo || '', 'arter97/android_kernel_nothing_sm8475') }}
-      #   run: |
-      #     llvm_dir=/home/arter97/android/nathan/llvm-22.1.0-x86_64/bin
-      #     sudo mkdir -p "$llvm_dir"
-      #     for tool in clang clang++ llvm-ar llvm-nm llvm-objdump llvm-objcopy llvm-readelf llvm-strip ld.lld; do
-      #       src=$(command -v "$tool" || true)
-      #       if [ -n "$src" ]; then
-      #         sudo ln -sf "$src" "$llvm_dir/$tool"
-      #       fi
-      #     done
-
-      - name: Clone sources
+      - name: Show build settings
         run: |
-          git clone --depth=1 -b "${{ inputs.kernel_branch || 'lineage-23.2' }}" \
-            "${{ inputs.kernel_repo || 'https://github.com/LineageOS/android_kernel_nothing_sm8475.git' }}" \
-            "$KERNEL_DIR"
+          source scripts/manual/setup_vars.sh
+          for v in KERNEL_REPO KERNEL_BRANCH DEFCONFIG DEFCONFIG_FRAGS EXTRA_USER_CFG \
+                   EXTRA_PATCHES_DIR SUSFS_BRANCH KERNEL_TYPE KPM_SUPPORT SUSFS_SUPPORT \
+                   SUSFS_FORCE BBG_SUPPORT; do
+            echo "$v=${!v}"
+          done
+          echo "ZIP_NAME=kernel-${KERNEL_TYPE}-2a-ReSukiSU" >> "$GITHUB_ENV"
 
-          git clone --depth=1 https://github.com/osm0sis/AnyKernel3.git "$ANYKERNEL_DIR"
-          rm -rf "$ANYKERNEL_DIR/.git"
-
-      - name: Clone SUSFS
-        if: ${{ inputs.susfs_support == true }}
+      - name: Set up sources (setup_repos.sh)
         run: |
-          git clone --depth=1 -b "${{ inputs.susfs_branch || 'gki-android13-5.10' }}" \
-            https://gitlab.com/simonpunk/susfs4ksu.git
-
-      - name: Setup ReSukiSU
-        run: |
-          cd "$KERNEL_DIR"
-          curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash
-
-      - name: Apply extra patches
-        if: ${{ inputs.extra_patches_dir != '' }}
-        run: |
-          patch_dir="$GITHUB_WORKSPACE/${{ inputs.extra_patches_dir }}"
-          if [ ! -d "$patch_dir" ]; then
-            echo "Extra patches dir not found: $patch_dir" >&2
-            exit 1
-          fi
-          cd "$KERNEL_DIR"
-          while IFS= read -r -d '' patch; do
-            echo "Applying $patch"
-            patch -p1 < "$patch"
-          done < <(find "$patch_dir" -maxdepth 1 -type f \( -name '*.patch' -o -name '*.diff' \) -print0 | sort -z)
-
-      - name: Apply SUSFS patches
-        if: ${{ inputs.susfs_support == true }}
-        run: |
-          cd "$KERNEL_DIR"
-          cp ../susfs4ksu/kernel_patches/fs/* ./fs/
-          cp ../susfs4ksu/kernel_patches/include/linux/* ./include/linux/
-          susfs_patch="../susfs4ksu/kernel_patches/50_add_susfs_in_${{ inputs.susfs_branch || 'gki-android13-5.10' }}.patch"
-          if [ "${{ inputs.susfs_force }}" = "true" ]; then
-            patch -p1 --force < "$susfs_patch" || echo "Continuing despite patch failure"
-          else
-            patch -p1 < "$susfs_patch"
-          fi
-
-      - name: Apply BBG patches
-        if: ${{ inputs.bbg_support == true }}
-        run: |
-          cd "$KERNEL_DIR"
-          wget -O- https://github.com/vc-teahouse/Baseband-guard/raw/main/setup.sh | bash
-          sed -i '/^config LSM$/,/^help$/{ /^[[:space:]]*default/ { /baseband_guard/! s/selinux/selinux,baseband_guard/ } }' security/Kconfig
-
-      - name: Prepare build scripts
-        run: |
-          chmod +x scripts/build_kernel.sh
-          chmod +x scripts/package_anykernel.sh
+          source scripts/manual/setup_vars.sh
+          scripts/manual/setup_repos.sh
 
       - name: Enable swap space
         run: |
@@ -225,31 +130,31 @@ jobs:
             echo "Swap file allocation failed; continuing without swap"
           fi
 
-      - name: Build kernel
+      - name: Build kernel (build_kernel.sh)
         run: |
-          SUSFS_SUPPORT="${{ inputs.susfs_support }}" \
-          KPM_SUPPORT="${{ inputs.kpm_support }}" \
-          BBG_SUPPORT="${{ inputs.bbg_support }}" \
+          source scripts/manual/setup_vars.sh
           scripts/build_kernel.sh
 
-      - name: Package AnyKernel3
+      - name: Package AnyKernel3 (package_anykernel.sh)
         run: |
-          KERNEL_TYPE="${{ inputs.kernel_type || 'LineageOS' }}" scripts/package_anykernel.sh
+          source scripts/manual/setup_vars.sh
+          scripts/package_anykernel.sh
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: kernel-${{ inputs.kernel_type || 'LineageOS' }}-2a-ReSukiSU
-          path: "kernel-${{ inputs.kernel_type || 'LineageOS' }}-2a-ReSukiSU.zip"
+          name: ${{ env.ZIP_NAME }}
+          path: ${{ env.ZIP_NAME }}.zip
           retention-days: 30
 
       - name: Upload .config for debugging
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: config-NP2-ReSukiSU
+          name: config-2a-ReSukiSU
           path: kernel/out/.config
           retention-days: 1
+          if-no-files-found: ignore
 
       - name: Collect .rej files
         if: always()

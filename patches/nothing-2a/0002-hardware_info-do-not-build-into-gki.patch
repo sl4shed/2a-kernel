@@ -1,0 +1,12 @@
+diff --git a/drivers/misc/hardware_info/Kconfig b/drivers/misc/hardware_info/Kconfig
+index 32c15a89b..a599fe798 100755
+--- a/drivers/misc/hardware_info/Kconfig
++++ b/drivers/misc/hardware_info/Kconfig
+@@ -1,6 +1,5 @@
+ config PRIZE_HARDWARE_INFO
+ 	tristate "hardware_info"
+-	default y
+ 	help
+ 	  hardware_info. If configures to be n, means devices doesn't support
+ 	  hardwareinfo functionality.
+\ No newline at end of file
