@@ -2,6 +2,13 @@
 /kernel/
 /susfs4ksu/
 /AnyKernel3/
+/toolchain/
+
+# Old Nothing-tree checkout kept for reference
+/kernel-nothing/
 
 # Build output
 /kernel-*.zip
+
+# Flashable images (scripts/make_boot_img.sh) and stock fallbacks
+/flash/

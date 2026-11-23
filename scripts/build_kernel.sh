@@ -1,10 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-defconfig_targets=()
-defconfig_paths=()
-if [ -n "${DEFCONFIG:-}" ]; then
-  for def in ${DEFCONFIG}; do
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+OUT="${KERNEL_DIR}/out"
+mkdir -p "${OUT}"
+frags=()
+
+if [ -n "${BASE_CONFIG:-}" ]; then
+  # Start from a complete .config (e.g. the one extracted from a stock boot.img).
+  base="${BASE_CONFIG}"
+  [ -f "${base}" ] || base="${REPO_ROOT}/${BASE_CONFIG}"
+  [ -f "${base}" ] || { echo "Base config not found: ${BASE_CONFIG}" >&2; exit 1; }
+  cp "${base}" "${OUT}/.config"
+else
+  defconfig_targets=()
+  defconfig_paths=()
+  for def in ${DEFCONFIG:-}; do
     if echo "${def}" | grep -q '^/'; then
       def_path="${def#/}"
     else
@@ -24,43 +35,29 @@ if [ -n "${DEFCONFIG:-}" ]; then
     defconfig_targets+=("${def_target}")
     defconfig_paths+=("${KERNEL_DIR}/arch/arm64/configs/${def_target}")
   done
-fi
 
-if [ "${#defconfig_targets[@]}" -lt 1 ]; then
-  echo "No defconfig provided" >&2
-  exit 1
-fi
-
-frags=()
-if [ -n "${DEFCONFIG_FRAGS:-}" ]; then
-  for frag in ${DEFCONFIG_FRAGS}; do
-    if [ -f "${frag}" ]; then
-      frags+=("${frag}")
-    elif [ -f "${KERNEL_DIR}/arch/arm64/configs/${frag}" ]; then
-      frags+=("${KERNEL_DIR}/arch/arm64/configs/${frag}")
-    else
-      echo "Skipping missing defconfig fragment: ${frag}"
-    fi
-  done
-fi
-
-make -C "${KERNEL_DIR}" ${MAKE_ARGS} "${defconfig_targets[0]}"
-
-merge_frags=()
-if [ "${#defconfig_paths[@]}" -gt 1 ]; then
-  merge_frags+=("${defconfig_paths[@]:1}")
-fi
-if [ "${#frags[@]}" -gt 0 ]; then
-  merge_frags+=("${frags[@]}")
-fi
-
-if [ "${#merge_frags[@]}" -gt 0 ]; then
-  if [ -x "${KERNEL_DIR}/scripts/kconfig/merge_config.sh" ]; then
-    ${KERNEL_DIR}/scripts/kconfig/merge_config.sh -m -O "${KERNEL_DIR}/out" "${KERNEL_DIR}/out/.config" "${merge_frags[@]}"
-  else
-    echo "merge_config.sh not found; cannot apply defconfig fragments" >&2
+  if [ "${#defconfig_targets[@]}" -lt 1 ]; then
+    echo "No defconfig provided" >&2
     exit 1
   fi
+
+  make -C "${KERNEL_DIR}" ${MAKE_ARGS} "${defconfig_targets[0]}"
+
+  # Further defconfigs are merged like fragments.
+  frags+=("${defconfig_paths[@]:1}")
+fi
+
+for frag in ${DEFCONFIG_FRAGS:-}; do
+  if [ -f "${frag}" ]; then
+    frags+=("${frag}")
+  elif [ -f "${KERNEL_DIR}/arch/arm64/configs/${frag}" ]; then
+    frags+=("${KERNEL_DIR}/arch/arm64/configs/${frag}")
+  else
+    echo "Skipping missing defconfig fragment: ${frag}"
+  fi
+done
+if [ "${#frags[@]}" -gt 0 ]; then
+  "${KERNEL_DIR}/scripts/kconfig/merge_config.sh" -m -O "${OUT}" "${OUT}/.config" "${frags[@]}"
 fi
 
 EXTRA_CFG="${KERNEL_DIR}/out/ci-extra.config"
@@ -93,12 +90,38 @@ done
 
 cat "${EXTRA_CFG}" >> "${KERNEL_DIR}/out/.config"
 
-make -C "${KERNEL_DIR}" ${MAKE_ARGS} olddefconfig
-[ -f "${KERNEL_DIR}/scripts/setlocalversion" ] && sed -i 's/-dirty//g' "${KERNEL_DIR}/scripts/setlocalversion" || true
+# GKI configs trim exports to the KMI symbol lists (CONFIG_TRIM_UNUSED_KSYMS).
+# Build the whitelist the way Google's build does: every list named in
+# build.config.gki.aarch64, flattened into one sorted symbol list.
+if grep -q '^CONFIG_TRIM_UNUSED_KSYMS=y' "${OUT}/.config" && [ -f "${KERNEL_DIR}/build.config.gki.aarch64" ]; then
+  lists=()
+  while IFS= read -r l; do lists+=("${KERNEL_DIR}/${l}"); done < <(
+    sed -n 's/^KMI_SYMBOL_LIST=//p' "${KERNEL_DIR}/build.config.gki.aarch64"
+    sed -n '/^ADDITIONAL_KMI_SYMBOL_LISTS="/,/^"/p' "${KERNEL_DIR}/build.config.gki.aarch64" | grep '^android/')
+  cat "${lists[@]}" | sed -e 's/#.*//' -e '/^\[.*\]/d' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e '/^$/d' \
+    | sort -u > "${OUT}/abi_symbollist.raw"
+  "${KERNEL_DIR}/scripts/config" --file "${OUT}/.config" --set-str UNUSED_KSYMS_WHITELIST "${OUT}/abi_symbollist.raw"
+  echo "KMI whitelist: $(wc -l < "${OUT}/abi_symbollist.raw") symbols from ${#lists[@]} lists"
+fi
 
-JOBS=$(( $(nproc) / 2 ))
+make -C "${KERNEL_DIR}" ${MAKE_ARGS} olddefconfig
+
+# Fixed version string (setlocalversion prefers .scmversion over git), so the
+# local SUSFS/KSU changes don't show up as -dirty or a different hash.
+if [ -n "${SCMVERSION:-}" ]; then
+  printf '%s' "${SCMVERSION}" > "${KERNEL_DIR}/.scmversion"
+else
+  rm -f "${KERNEL_DIR}/.scmversion"
+  sed -i 's/-dirty//g' "${KERNEL_DIR}/scripts/setlocalversion"
+fi
+
+JOBS="${JOBS:-$(( $(nproc) * 2 / 3 ))}"
 [ "${JOBS}" -lt 1 ] && JOBS=1
-make -C "${KERNEL_DIR}" -j"${JOBS}" ${MAKE_ARGS} Image KCFLAGS="-Wno-error"
+targets="Image"
+grep -q '^CONFIG_MODULES=y' "${OUT}/.config" && targets="Image modules"
+make -C "${KERNEL_DIR}" -j"${JOBS}" ${MAKE_ARGS} ${targets} \
+  KCFLAGS="-D__ANDROID_COMMON_KERNEL__ -Wno-error"
+echo "Built: $(cat "${OUT}/include/config/kernel.release")"
 
 if [ "${KPM_SUPPORT}" = "true" ]; then
   cd "${KERNEL_DIR}/out/arch/arm64/boot/"

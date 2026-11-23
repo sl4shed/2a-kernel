@@ -13,5 +13,5 @@ cp "$(dirname "$0")/anykernel.sh" "${ANYKERNEL_DIR}/anykernel.sh"
 
 cd "${ANYKERNEL_DIR}"
 KERNEL_TYPE="${KERNEL_TYPE:-LineageOS}"
-ZIP_NAME="kernel-${KERNEL_TYPE}-2a-ReSukiSU.zip"
+ZIP_NAME="kernel-${KERNEL_TYPE}-2a-BakaSU.zip"
 zip -r9 "../${ZIP_NAME}" ./*

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Clone the kernel and apply ReSukiSU / SUSFS / BBG.
+# Fetch the toolchain, clone the kernel and apply BakaSU / SUSFS / BBG.
 # Run after `source ./scripts/manual/setup_vars.sh`.
 
 set -euo pipefail
@@ -7,8 +7,27 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
 
+if [ -n "${CLANG_VERSION:-}" ] && [ ! -x "$TOOLCHAIN_DIR/clang-$CLANG_VERSION/bin/clang" ]; then
+  echo "Downloading Google clang-$CLANG_VERSION..."
+  mkdir -p "$TOOLCHAIN_DIR/clang-$CLANG_VERSION"
+  curl -fsSL "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/$PREBUILTS_BRANCH/clang-$CLANG_VERSION.tar.gz" \
+    | tar -xz -C "$TOOLCHAIN_DIR/clang-$CLANG_VERSION"
+fi
+if [ -n "${CLANG_VERSION:-}" ] && [ ! -x "$TOOLCHAIN_DIR/kernel-build-tools/bin/pahole" ]; then
+  echo "Downloading Google kernel build tools..."
+  mkdir -p "$TOOLCHAIN_DIR/kernel-build-tools"
+  curl -fsSL "https://android.googlesource.com/kernel/prebuilts/build-tools/+archive/refs/heads/$PREBUILTS_BRANCH/linux-x86.tar.gz" \
+    | tar -xz -C "$TOOLCHAIN_DIR/kernel-build-tools"
+fi
+
 echo "Cloning kernel sources..."
-git clone --depth=1 -b "$KERNEL_BRANCH" "$KERNEL_REPO" "$KERNEL_DIR"
+if [ -n "${KERNEL_COMMIT:-}" ]; then
+  git init -q "$KERNEL_DIR"
+  git -C "$KERNEL_DIR" fetch --depth=1 "$KERNEL_REPO" "$KERNEL_COMMIT"
+  git -C "$KERNEL_DIR" checkout -q -b "$KERNEL_BRANCH" FETCH_HEAD
+else
+  git clone --depth=1 -b "$KERNEL_BRANCH" "$KERNEL_REPO" "$KERNEL_DIR"
+fi
 
 if [ -n "${EXTRA_PATCHES_DIR:-}" ]; then
   patch_dir="$REPO_ROOT/$EXTRA_PATCHES_DIR"
@@ -34,14 +53,25 @@ echo "Cloning AnyKernel3..."
 git clone --depth=1 https://github.com/osm0sis/AnyKernel3.git "$ANYKERNEL_DIR"
 rm -rf "$ANYKERNEL_DIR/.git"
 
-echo "Setting up ReSukiSU..."
+echo "Setting up BakaSU (formerly ReSukiSU)..."
 cd "$KERNEL_DIR"
-curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash
+if [ "${KSU_REF:-latest}" = "latest" ]; then
+  curl -LSs "https://raw.githubusercontent.com/Baka-SU/BakaSU/main/kernel/setup.sh" | bash
+else
+  curl -LSs "https://raw.githubusercontent.com/Baka-SU/BakaSU/$KSU_REF/kernel/setup.sh" | bash -s "$KSU_REF"
+fi
+echo "BakaSU at $(git -C KernelSU rev-parse HEAD)"
 cd "$REPO_ROOT"
 
 if [ "${SUSFS_SUPPORT}" = "true" ]; then
   echo "Cloning SUSFS..."
-  git clone --depth=1 -b "$SUSFS_BRANCH" https://gitlab.com/simonpunk/susfs4ksu.git "$SUSFS_DIR"
+  if [ "${SUSFS_REF:-latest}" = "latest" ]; then
+    git clone --depth=1 -b "$SUSFS_BRANCH" https://gitlab.com/simonpunk/susfs4ksu.git "$SUSFS_DIR"
+  else
+    git clone --filter=blob:none --no-checkout -b "$SUSFS_BRANCH" https://gitlab.com/simonpunk/susfs4ksu.git "$SUSFS_DIR"
+    git -C "$SUSFS_DIR" checkout -q "$SUSFS_REF"
+  fi
+  echo "SUSFS at $(git -C "$SUSFS_DIR" rev-parse HEAD)"
 
   echo "Applying SUSFS patches..."
   force=""

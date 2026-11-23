@@ -13,17 +13,17 @@ on:
   workflow_dispatch:
     inputs:
       kernel_repo:
-        description: 'Kernel source repo (empty = setup_vars.sh default, NothingOSS mt6886)'
+        description: 'Kernel source repo (empty = Google ACK at the stock 260928 commit)'
         required: false
         type: string
         default: ''
       kernel_branch:
-        description: 'Kernel branch (empty = setup_vars.sh default, mt6886/Pacman/16b)'
+        description: 'Kernel branch (empty = android13-5.15-2026-03). Setting repo/branch/defconfig drops the stock commit, config and version string'
         required: false
         type: string
         default: ''
       kernel_defconfig:
-        description: 'Defconfig(s), space-separated. Use /name if it is in the kernel root (empty = gki_defconfig)'
+        description: 'Defconfig(s), space-separated, used instead of the stock config. Use /name if it is in the kernel root'
         required: false
         type: string
         default: ''
@@ -33,12 +33,12 @@ on:
         type: string
         default: ''
       extra_user_cfg:
-        description: 'Space-separated CONFIG_X=y/n overrides (empty = setup_vars.sh default, ThinLTO)'
+        description: 'Space-separated CONFIG_X=y/n overrides (empty = CONFIG_MODULE_SIG_PROTECT=n)'
         required: false
         type: string
         default: ''
       extra_patches_dir:
-        description: 'Repo-local patch directory applied after cloning (empty = patches/nothing-2a)'
+        description: 'Repo-local patch directory applied after cloning (empty = patches/ack-android13-5.15)'
         required: false
         type: string
         default: ''
@@ -47,8 +47,18 @@ on:
         required: false
         type: string
         default: ''
+      ksu_ref:
+        description: 'BakaSU commit/tag, or latest (empty = tested pin in setup_vars.sh)'
+        required: false
+        type: string
+        default: ''
+      susfs_ref:
+        description: 'SUSFS commit, or latest (empty = tested pin in setup_vars.sh)'
+        required: false
+        type: string
+        default: ''
       kernel_type:
-        description: 'Kernel type identifier used in the zip name (empty = NothingOSS)'
+        description: 'Kernel type identifier used in the zip name (empty = GKI)'
         required: false
         type: string
         default: ''
@@ -56,7 +66,7 @@ on:
         description: 'Enable KPM support'
         required: false
         type: boolean
-        default: true
+        default: false
       susfs_support:
         description: 'Enable SUSFS support'
         required: false
@@ -71,12 +81,12 @@ on:
         description: 'Enable BBG support'
         required: false
         type: boolean
-        default: true
+        default: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 240
     env:
       KERNEL_REPO: ${{ inputs.kernel_repo }}
       KERNEL_BRANCH: ${{ inputs.kernel_branch }}
@@ -85,6 +95,8 @@ jobs:
       EXTRA_USER_CFG: ${{ inputs.extra_user_cfg }}
       EXTRA_PATCHES_DIR: ${{ inputs.extra_patches_dir }}
       SUSFS_BRANCH: ${{ inputs.susfs_branch }}
+      KSU_REF: ${{ inputs.ksu_ref }}
+      SUSFS_REF: ${{ inputs.susfs_ref }}
       KERNEL_TYPE: ${{ inputs.kernel_type }}
       KPM_SUPPORT: ${{ inputs.kpm_support }}
       SUSFS_SUPPORT: ${{ inputs.susfs_support }}
@@ -95,23 +107,27 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            build-essential bc bison flex libelf-dev libssl-dev ccache \
-            lz4 zip python3 clang llvm lld gcc-aarch64-linux-gnu \
-            gcc-arm-linux-gnueabi wget curl cpio dwarves
+            build-essential bc bison flex libelf-dev libssl-dev \
+            lz4 zip python3 wget curl cpio git
 
       - name: Show build settings
         run: |
           source scripts/manual/setup_vars.sh
-          for v in KERNEL_REPO KERNEL_BRANCH DEFCONFIG DEFCONFIG_FRAGS EXTRA_USER_CFG \
-                   EXTRA_PATCHES_DIR SUSFS_BRANCH KERNEL_TYPE KPM_SUPPORT SUSFS_SUPPORT \
+          for v in KERNEL_REPO KERNEL_BRANCH KERNEL_COMMIT BASE_CONFIG DEFCONFIG DEFCONFIG_FRAGS EXTRA_USER_CFG \
+                   EXTRA_PATCHES_DIR SUSFS_BRANCH KSU_REF SUSFS_REF KERNEL_TYPE KPM_SUPPORT SUSFS_SUPPORT \
                    SUSFS_FORCE BBG_SUPPORT; do
             echo "$v=${!v}"
           done
-          echo "ZIP_NAME=kernel-${KERNEL_TYPE}-2a-ReSukiSU" >> "$GITHUB_ENV"
+          echo "ZIP_NAME=kernel-${KERNEL_TYPE}-2a-BakaSU" >> "$GITHUB_ENV"
 
       - name: Set up sources (setup_repos.sh)
         run: |
@@ -122,7 +138,8 @@ jobs:
         run: |
           sudo swapoff /swapfile 2>/dev/null || true
           sudo rm -f /swapfile
-          if sudo fallocate -l 12G /swapfile; then
+          # Full LTO links vmlinux in one process and needs well over 16GB.
+          if sudo fallocate -l 16G /swapfile; then
             sudo chmod 600 /swapfile
             sudo mkswap /swapfile
             sudo swapon /swapfile || echo "Swap not permitted on this runner"
@@ -133,7 +150,7 @@ jobs:
       - name: Build kernel (build_kernel.sh)
         run: |
           source scripts/manual/setup_vars.sh
-          scripts/build_kernel.sh
+          JOBS=4 scripts/build_kernel.sh
 
       - name: Package AnyKernel3 (package_anykernel.sh)
         run: |
@@ -151,7 +168,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: config-2a-ReSukiSU
+          name: config-2a-BakaSU
           path: kernel/out/.config
           retention-days: 1
           if-no-files-found: ignore
@@ -175,5 +192,5 @@ jobs:
         if: always() && steps.collect_rej.outputs.found == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: rej-2a-ReSukiSU
+          name: rej-2a-BakaSU
           path: rej/
